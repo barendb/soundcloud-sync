@@ -1,0 +1,13 @@
+{
+  "tasks": {
+    "dev": "deno run --watch main.ts"
+  },
+  "imports": {
+    "@inquirer/prompts": "npm:@inquirer/prompts@^7.3.1",
+    "@std/assert": "jsr:@std/assert@1",
+    "@std/dotenv": "jsr:@std/dotenv@^0.225.3",
+    "chalk": "npm:chalk@^5.4.1",
+    "figlet": "npm:figlet@^1.8.0",
+    "node-html-parser": "npm:node-html-parser@7.0.1"
+  }
+}
