@@ -1,6 +1,12 @@
 import { parse } from "node-html-parser";
-import { HydratableBase, HydratableTypes, Playlist, Track } from "./types.ts";
+import { Playlist, Track, User } from "./soundcloud-types.ts";
 import chalk from "chalk";
+import {
+  ExportPlaylistOptions,
+  HydratableBase,
+  HydratableTypes,
+} from "./types.ts";
+import path from "node:path";
 
 const USER_AGENT =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
@@ -38,6 +44,40 @@ export async function getSoundCloudHtml(url: string): Promise<string> {
   return result.text();
 }
 
+export async function getUserPlaylists(
+  url: string,
+  clientId: string,
+): Promise<Playlist[] | undefined> {
+  // Step 1 : Download HTML
+  const html = await getSoundCloudHtml(url);
+  const hydrationData = extractSCHydrationData(html);
+
+  // get user part from the html
+  const user = hydrationData.find((x) =>
+    x.hydratable === HydratableTypes.USER
+  ) as HydratableBase<User>;
+
+  if (!user) {
+    return undefined;
+  }
+
+  return getUserPlaylistsFromUserId(user.data.id, clientId);
+}
+
+export async function getUserPlaylistsFromUserId(
+  userId: number,
+  clientId: string,
+): Promise<Playlist[]> {
+  const url =
+    `https://api-v2.soundcloud.com/users/${userId}/playlists_without_albums?client_id=${clientId}&limit=10&offset=0&linked_partitioning=1`;
+
+  const result = await fetch(url, { method: "GET" });
+
+  const trackData = await result.json();
+
+  return trackData.collection as Playlist[];
+}
+
 export async function getM3u8TrackUrl(
   track: Track,
   clientId: string,
@@ -59,18 +99,20 @@ export async function getM3u8TrackUrl(
   return response.url;
 }
 
-function safeTitle(track: Track): string {
-  return track.title.replace(/[/\\?%*:|"<>]/g, "-");
+function safePath(path: string): string {
+  return path.replace(/[/\\?%*:|"<>]/g, "-");
 }
 
-export async function saveTrack(track: Track, url: string): Promise<void> {
-  const safeTitle = track.title.replace(/[/\\?%*:|"<>]/g, "-");
-
+export async function saveTrack(
+  track: Track,
+  url: string,
+  exportPath: string,
+): Promise<void> {
   const ffmpegCommand = new Deno.Command("ffmpeg", {
     args: [
       "-i",
       url,
-      `${safeTitle}.mp3`,
+      exportPath,
     ],
   });
 
@@ -78,21 +120,13 @@ export async function saveTrack(track: Track, url: string): Promise<void> {
     const { success } = await ffmpegCommand.output();
     if (!success) {
       console.log(
-        `${chalk.red("Failed downloading ")} ${chalk.green(safeTitle)}`,
+        `${chalk.red("Failed downloading ")} ${chalk.green(track.title)}`,
       );
     }
   } catch (error) {
-    console.error(`Error downloading ${safeTitle}:`, error);
+    console.error(`Error downloading ${track.title}:`, error);
   }
 }
-
-export type ExportOptions = {
-  playlistUrl: string;
-  clientId: string;
-  path?: string;
-  override?: boolean;
-  showPrompts?: boolean;
-};
 
 export async function getTrackData(
   trackId: number,
@@ -112,14 +146,29 @@ async function doesFileExist(file: string): Promise<boolean> {
   try {
     await Deno.lstat(file);
     return true;
-  } catch (err) {
+  } catch {
     return false;
   }
-
-  return false;
 }
 
-export async function exportPlaylist(options: ExportOptions) {
+async function ensurePlaylistPath(
+  exportPath: string,
+  playlistTitle: string,
+): Promise<string> {
+  const playlistPath = path.join(exportPath, safePath(playlistTitle));
+
+  try {
+    await Deno.mkdir(playlistPath, { recursive: true });
+    return playlistPath;
+  } catch {
+    console.log(
+      `${chalk.red("Failed to create path ")} ${chalk.green(playlistPath)}`,
+    );
+    Deno.exit(1);
+  }
+}
+
+export async function exportPlaylist(options: ExportPlaylistOptions) {
   // Step 1 : Download HTML
   const html = await getSoundCloudHtml(options.playlistUrl);
   const hydrationData = extractSCHydrationData(html);
@@ -129,12 +178,6 @@ export async function exportPlaylist(options: ExportOptions) {
     x.hydratable === HydratableTypes.PLAYLIST
   ) as HydratableBase<Playlist>;
 
-  if (options.showPrompts) {
-    console.log(
-      `Tracks in playlist: ${chalk.yellow(playlist.data.tracks.length)}`,
-    );
-  }
-
   if (!playlist) {
     console.log(
       `${chalk.red("Playlist ")} ${chalk.green(options.playlistUrl)} ${
@@ -142,6 +185,22 @@ export async function exportPlaylist(options: ExportOptions) {
       }`,
     );
     Deno.exit(1);
+  }
+
+  if (options.showPrompts) {
+    console.log(
+      `Playlist: ${chalk.yellow(playlist.data.title)}`,
+    );
+    console.log(
+      `Tracks #: ${chalk.yellow(playlist.data.tracks.length)}`,
+    );
+  }
+
+  const exportDir = await ensurePlaylistPath(options.path, playlist.data.title);
+  if (options.showPrompts) {
+    console.log(
+      `Start export to: ${chalk.yellow(exportDir)}`,
+    );
   }
 
   // loop through each track in the playlist and save it as a file
@@ -162,8 +221,13 @@ export async function exportPlaylist(options: ExportOptions) {
       }
     }
 
+    const trackPath = path.join(
+      exportDir,
+      `${safePath(trackData.permalink)}.mp3`,
+    );
+
     if (
-      !options.override && await doesFileExist(`${safeTitle(trackData)}.mp3`)
+      !options.override && await doesFileExist(trackPath)
     ) {
       if (options.showPrompts) {
         console.log(
@@ -193,6 +257,6 @@ export async function exportPlaylist(options: ExportOptions) {
       continue;
     }
 
-    await saveTrack(trackData, m3u8TrackUrl);
+    await saveTrack(trackData, m3u8TrackUrl, trackPath);
   }
 }
