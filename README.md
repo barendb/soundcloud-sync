@@ -1,3 +1,5 @@
+![SoundCloud Sync](docs/preview.png)
+
 # SoundCloud Sync
 
 This little program will sync down your **public** playlists from SoundCloud to
