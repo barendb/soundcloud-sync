@@ -5,7 +5,9 @@
     "jsr:@std/dotenv@*": "0.225.3",
     "jsr:@std/dotenv@~0.225.3": "0.225.3",
     "jsr:@std/internal@^1.0.5": "1.0.5",
+    "npm:@inquirer/prompts@7.3.1": "7.3.1",
     "npm:@inquirer/prompts@^7.3.1": "7.3.1",
+    "npm:@types/node@^22.13.1": "22.13.1",
     "npm:chalk@^5.4.1": "5.4.1",
     "npm:figlet@^1.8.0": "1.8.0",
     "npm:node-html-parser@7.0.1": "7.0.1"
@@ -140,6 +142,12 @@
     },
     "@inquirer/type@3.0.4": {
       "integrity": "sha512-2MNFrDY8jkFYc9Il9DgLsHhMzuHnOYM1+CUYVWbzu9oT0hC7V7EcYvdCKeoll/Fcci04A+ERZ9wcc7cQ8lTkIA=="
+    },
+    "@types/node@22.13.1": {
+      "integrity": "sha512-jK8uzQlrvXqEU91UxiK5J7pKHyzgnI1Qnl0QDHIgVGuolJhRb9EEl28Cj9b3rGR8B2lhFCtvIm5os8lFnO/1Ew==",
+      "dependencies": [
+        "undici-types"
+      ]
     },
     "ansi-escapes@4.3.2": {
       "integrity": "sha512-gKXj5ALrKWQLsYG9jlTRmR/xKluxHV+Z9QEwNIgCfM1/uwPMCuzVVnh5mwTd+OuBZcwSIMbqssNWRm1lE51QaQ==",
@@ -292,6 +300,9 @@
     "type-fest@0.21.3": {
       "integrity": "sha512-t0rzBq87m3fVcduHDUFhKmyyX+9eo6WQjZvf51Ea/M0Q7+T374Jp1aUiyUl0GKxp8M/OETVHSDvmkyPgvX+X2w=="
     },
+    "undici-types@6.20.0": {
+      "integrity": "sha512-Ny6QZ2Nju20vw1SRHe3d9jVu6gJ+4e3+MMpqu7pqE5HT6WsTSlce++GQmK5UXS8mzV8DSYHrQH+Xrf2jVcuKNg=="
+    },
     "wrap-ansi@6.2.0": {
       "integrity": "sha512-r6lPcBGxZXlIcymEu7InxDMhdW0KDxpLgoFLcguasxCaJ/SOIZwINatK9KY/tf+ZrlywOKU0UDj3ATXUBfxJXA==",
       "dependencies": [
@@ -309,6 +320,7 @@
       "jsr:@std/assert@1",
       "jsr:@std/dotenv@~0.225.3",
       "npm:@inquirer/prompts@^7.3.1",
+      "npm:@types/node@^22.13.1",
       "npm:chalk@^5.4.1",
       "npm:figlet@^1.8.0",
       "npm:node-html-parser@7.0.1"
