@@ -82,12 +82,13 @@ export async function getM3u8TrackUrl(
   track: Track,
   clientId: string,
 ): Promise<string | null> {
+
   // get transcoding
   const transcoding = track.media.transcodings.find((x) =>
-    x.preset === "mp3_1_0" && x.format.protocol === "hls"
+    x.preset.startsWith("mp3") && x.format.protocol === "hls"
   );
-
   if (!transcoding) {
+    // console.log(JSON.stringify(track, null, 2));
     return null;
   }
 
