@@ -169,6 +169,64 @@ async function ensurePlaylistPath(
   }
 }
 
+export async function exportTrack(track: Track, exportPath: string, options: ExportPlaylistOptions) {
+  let trackData = track;
+
+  // console.log(JSON.stringify(trackData, null, 2));
+
+  if (!track.title || !track.media || !track.track_authorization) {
+    trackData = await getTrackData(track.id, options.clientId);
+
+    if (!trackData) {
+      if (options.showPrompts) {
+        console.log(
+          chalk.gray(`Skipping not valid track...`),
+        );
+        console.log(JSON.stringify(track, null, 2));
+      }
+      return;
+    }
+  }
+
+  const trackPath = path.join(
+    exportPath,
+    `${safePath(trackData.permalink)}.mp3`,
+  );
+
+  if (
+    !options.override && await doesFileExist(trackPath)
+  ) {
+    if (options.showPrompts) {
+      console.log(
+        `Skipping track already exists: ${chalk.yellow(trackData.title)}`,
+      );
+    }
+
+    return
+  }
+
+  if (options.showPrompts) {
+    console.log(
+      `Exporting track: ${chalk.green(trackData.title)}`,
+    );
+  }
+
+  const m3u8TrackUrl = await getM3u8TrackUrl(trackData, options.clientId);
+
+  if (!m3u8TrackUrl) {
+    if (options.showPrompts) {
+      console.log(
+        `${chalk.red("Failed exporting track:")} ${
+          chalk.green(trackData.title)
+        }`,
+      );
+    }
+    return
+  }
+
+  await saveTrack(trackData, m3u8TrackUrl, trackPath);
+}
+
 export async function exportPlaylist(options: ExportPlaylistOptions) {
   // Step 1 : Download HTML
   const html = await getSoundCloudHtml(options.playlistUrl);
@@ -197,67 +255,15 @@ export async function exportPlaylist(options: ExportPlaylistOptions) {
     );
   }
 
-  const exportDir = await ensurePlaylistPath(options.path, playlist.data.title);
+  const exportPath = await ensurePlaylistPath(options.path, playlist.data.title);
   if (options.showPrompts) {
     console.log(
-      `Start export to: ${chalk.yellow(exportDir)}`,
+      `Start export to: ${chalk.yellow(exportPath)}`,
     );
   }
 
   // loop through each track in the playlist and save it as a file
   for (const track of playlist.data.tracks) {
-    let trackData = track;
-
-    if (!track.title || !track.media || !track.track_authorization) {
-      trackData = await getTrackData(track.id, options.clientId);
-
-      if (!trackData) {
-        if (options.showPrompts) {
-          console.log(
-            chalk.gray(`Skipping not valid track...`),
-          );
-          console.log(JSON.stringify(track, null, 2));
-        }
-        continue;
-      }
-    }
-
-    const trackPath = path.join(
-      exportDir,
-      `${safePath(trackData.permalink)}.mp3`,
-    );
-
-    if (
-      !options.override && await doesFileExist(trackPath)
-    ) {
-      if (options.showPrompts) {
-        console.log(
-          `Skipping track already exists: ${chalk.yellow(trackData.title)}`,
-        );
-      }
-
-      continue;
-    }
-
-    if (options.showPrompts) {
-      console.log(
-        `Exporting track: ${chalk.green(trackData.title)}`,
-      );
-    }
-
-    const m3u8TrackUrl = await getM3u8TrackUrl(trackData, options.clientId);
-
-    if (!m3u8TrackUrl) {
-      if (options.showPrompts) {
-        console.log(
-          `${chalk.red("Failed exporting track:")} ${
-            chalk.green(trackData.title)
-          }`,
-        );
-      }
-      continue;
-    }
-
-    await saveTrack(trackData, m3u8TrackUrl, trackPath);
+    await exportTrack(track, exportPath, options);
   }
 }
