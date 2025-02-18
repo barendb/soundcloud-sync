@@ -104,15 +104,55 @@ function safePath(path: string): string {
   return path.replace(/[/\\?%*:|"<>]/g, "-");
 }
 
+function createFfmpegMetaDataFromTrack(track: Track): string[] {
+  const metadata: string[] = [];
+
+  function push(val: string) {
+    metadata.push('-metadata');
+    metadata.push(val);
+  }
+
+  // try publisher_metadata first
+  if (track.publisher_metadata?.artist && track.publisher_metadata?.release_title) {
+    push(`artist=${track.publisher_metadata?.artist}`);
+    push(`title=${track.publisher_metadata?.release_title}`);
+  } else {
+    const split = track.title.split(" - ");
+    push(`artist=${split[0]}`);
+    push(`title=${split[1]}`);
+  }
+
+  if (track.publisher_metadata?.album_title) {
+    push(`album=${track.publisher_metadata?.album_title}`);
+  }
+
+  if (track.genre) {
+    push(`genre=${track.genre}`);
+  }
+
+  if (track.release_date) {
+    const releaseDate = new Date(track.release_date);
+    push(`year=${releaseDate.getFullYear()}`);
+  }
+
+  return metadata;
+}
+
+
 export async function saveTrack(
   track: Track,
   url: string,
   exportPath: string,
 ): Promise<void> {
+
+  const metaDataArgs = createFfmpegMetaDataFromTrack(track);
+
+
   const ffmpegCommand = new Deno.Command("ffmpeg", {
     args: [
       "-i",
       url,
+      ...metaDataArgs,
       exportPath,
     ],
   });
