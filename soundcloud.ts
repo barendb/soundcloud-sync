@@ -82,7 +82,6 @@ export async function getM3u8TrackUrl(
   track: Track,
   clientId: string,
 ): Promise<string | null> {
-
   // get transcoding
   const transcoding = track.media.transcodings.find((x) =>
     x.preset.startsWith("mp3") && x.format.protocol === "hls"
@@ -108,12 +107,14 @@ function createFfmpegMetaDataFromTrack(track: Track): string[] {
   const metadata: string[] = [];
 
   function push(val: string) {
-    metadata.push('-metadata');
+    metadata.push("-metadata");
     metadata.push(val);
   }
 
   // try publisher_metadata first
-  if (track.publisher_metadata?.artist && track.publisher_metadata?.release_title) {
+  if (
+    track.publisher_metadata?.artist && track.publisher_metadata?.release_title
+  ) {
     push(`artist=${track.publisher_metadata?.artist}`);
     push(`title=${track.publisher_metadata?.release_title}`);
   } else {
@@ -138,15 +139,12 @@ function createFfmpegMetaDataFromTrack(track: Track): string[] {
   return metadata;
 }
 
-
 export async function saveTrack(
   track: Track,
   url: string,
   exportPath: string,
 ): Promise<void> {
-
   const metaDataArgs = createFfmpegMetaDataFromTrack(track);
-
 
   const ffmpegCommand = new Deno.Command("ffmpeg", {
     args: [
@@ -155,6 +153,7 @@ export async function saveTrack(
       ...metaDataArgs,
       exportPath,
     ],
+    windowsRawArguments: true,
   });
 
   try {
@@ -209,7 +208,11 @@ async function ensurePlaylistPath(
   }
 }
 
-export async function exportTrack(track: Track, exportPath: string, options: ExportPlaylistOptions) {
+export async function exportTrack(
+  track: Track,
+  exportPath: string,
+  options: ExportPlaylistOptions,
+) {
   let trackData = track;
 
   // console.log(JSON.stringify(trackData, null, 2));
@@ -248,7 +251,7 @@ export async function exportTrack(track: Track, exportPath: string, options: Exp
       );
     }
 
-    return
+    return;
   }
 
   if (options.showPrompts) {
@@ -267,7 +270,7 @@ export async function exportTrack(track: Track, exportPath: string, options: Exp
         }`,
       );
     }
-    return
+    return;
   }
 
   await saveTrack(trackData, m3u8TrackUrl, trackPath);
@@ -301,7 +304,10 @@ export async function exportPlaylist(options: ExportPlaylistOptions) {
     );
   }
 
-  const exportPath = await ensurePlaylistPath(options.path, playlist.data.title);
+  const exportPath = await ensurePlaylistPath(
+    options.path,
+    playlist.data.title,
+  );
   if (options.showPrompts) {
     console.log(
       `Start export to: ${chalk.yellow(exportPath)}`,
