@@ -233,8 +233,14 @@ export async function exportTrack(track: Track, exportPath: string, options: Exp
     `${safePath(trackData.permalink)}.mp3`,
   );
 
+  const fileExists = await doesFileExist(trackPath);
+
+  if (options.override && fileExists) {
+    await Deno.remove(trackPath);
+  }
+
   if (
-    !options.override && await doesFileExist(trackPath)
+    !options.override && fileExists
   ) {
     if (options.showPrompts) {
       console.log(
