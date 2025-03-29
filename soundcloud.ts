@@ -84,7 +84,7 @@ export async function getM3u8TrackUrl(
 ): Promise<string | null> {
   // get transcoding
   const transcoding = track.media.transcodings.find((x) =>
-    x.preset.startsWith("mp3") && x.format.protocol === "hls"
+    x.preset.startsWith("opus") && x.format.protocol === "hls"
   );
   if (!transcoding) {
     // console.log(JSON.stringify(track, null, 2));
@@ -94,9 +94,16 @@ export async function getM3u8TrackUrl(
   const url =
     `${transcoding.url}?client_id=${clientId}&track_authorization=${track.track_authorization}`;
   const authedStreamResponse = await fetch(url, { method: "GET" });
-  const response = await authedStreamResponse.json();
 
-  return response.url;
+  const result = await authedStreamResponse.text();
+
+  // console.log({
+  //   url,
+  //   result,
+  // })
+
+  const resultJson = JSON.parse(result);
+  return resultJson.url;
 }
 
 function safePath(path: string): string {
@@ -150,6 +157,10 @@ export async function saveTrack(
     args: [
       "-i",
       url,
+      "-ab",
+      "320k",
+      "-f",
+      "mp3",
       ...metaDataArgs,
       exportPath,
     ],
@@ -230,6 +241,8 @@ export async function exportTrack(
       return;
     }
   }
+
+  //console.log(JSON.stringify(trackData, null, 2));
 
   const trackPath = path.join(
     exportPath,
